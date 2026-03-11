@@ -20,7 +20,7 @@
   "homepage": "https://github.com/longtimeno-c/DB1-Coursework#readme",
   "dependencies": {
     "@prisma/client": "^7.5.0",
-    "prisma": "^7.5.0"
+    "prisma": "^6.19.2"
   },
   "devDependencies": {
     "@types/node": "^25.4.0",
