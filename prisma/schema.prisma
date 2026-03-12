@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -10,4 +8,85 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model Player {
+  id          Int               @id @default(autoincrement())
+  name        String
+  gender      String            // "M" | "F"
+  nationality String
+  dateOfBirth DateTime
+  isActive    Boolean           @default(true)
+  coaches     PlayerCoach[]
+  matchEntries MatchPlayer[]
+  flags       PerformanceFlag[]
+}
+
+model Coach {
+  id                     Int           @id @default(autoincrement())
+  name                   String
+  nationality            String
+  formerPlayerExperience Boolean
+  players                PlayerCoach[]
+}
+
+model PlayerCoach {
+  id        Int       @id @default(autoincrement())
+  player    Player    @relation(fields: [playerId], references: [id])
+  playerId  Int
+  coach     Coach     @relation(fields: [coachId], references: [id])
+  coachId   Int
+  startDate DateTime
+  endDate   DateTime?
+}
+
+model Tournament {
+  id          Int               @id @default(autoincrement())
+  name        String
+  location    String
+  surfaceType String            // "Hard" | "Clay" | "Grass"
+  startDate   DateTime
+  endDate     DateTime
+  isGrandSlam Boolean           @default(false)
+  matches     Match[]
+  flags       PerformanceFlag[]
+}
+
+model Match {
+  id           Int           @id @default(autoincrement())
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id])
+  tournamentId Int
+  round        String        // "QF" | "SF" | "F"
+  matchDate    DateTime
+  players      MatchPlayer[]
+  scores       MatchScore[]
+}
+
+model MatchPlayer {
+  id       Int     @id @default(autoincrement())
+  match    Match   @relation(fields: [matchId], references: [id])
+  matchId  Int
+  player   Player  @relation(fields: [playerId], references: [id])
+  playerId Int
+  side     String  // "A" | "B"
+  isWinner Boolean @default(false)
+}
+
+model MatchScore {
+  id           Int   @id @default(autoincrement())
+  match        Match @relation(fields: [matchId], references: [id])
+  matchId      Int
+  setNumber    Int
+  playerAGames Int
+  playerBGames Int
+}
+
+model PerformanceFlag {
+  id           Int        @id @default(autoincrement())
+  player       Player     @relation(fields: [playerId], references: [id])
+  playerId     Int
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  tournamentId Int
+  flagReason   String
+  flaggedAt    DateTime   @default(now())
 }
