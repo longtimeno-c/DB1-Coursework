@@ -72,6 +72,30 @@ Design and implement a **tennis tournament database** tracking:
 - Critical reflection
 - Report presentation
 
+# Report Structure
+1. Front Page
+
+2. Introduction
+
+3. Database Design
+   - ER Diagram
+   - Design Decisions
+   - Third Normal Form
+
+4. Database Implementation
+   4.1 SQL-DDL
+   4.2 SQL-DML
+
+5. Querying the Database
+   - Simple Queries
+   - Complex Queries
+
+6. Reflection
+
+7. Conclusion
+
+8. Effort Allocation Sheet
+
 
 
 npx prisma migrate dev
