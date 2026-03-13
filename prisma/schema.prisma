@@ -11,23 +11,25 @@ datasource db {
 }
 
 model Player {
-  id          Int               @id @default(autoincrement())
-  name        String
-  gender      String            // "M" | "F"
-  nationality String
-  dateOfBirth DateTime
-  isActive    Boolean           @default(true)
-  coaches     PlayerCoach[]
-  matchEntries MatchPlayer[]
-  flags       PerformanceFlag[]
+  id                Int        @id @default(autoincrement())
+  name              String
+  gender            String     // "M" | "F"
+  nationality       String
+  dateOfBirth       DateTime
+  isActive          Boolean     @default(true)
+  coaches           PlayerCoach[]
+  matchEntries      MatchPlayer[]
+  flags             PerformanceFlag[]
+  championships     TournamentChampion[]
+  stats             PlayerTournamentStats[]
 }
 
 model Coach {
-  id                     Int           @id @default(autoincrement())
-  name                   String
-  nationality            String
-  formerPlayerExperience Boolean
-  players                PlayerCoach[]
+  id                       Int           @id @default(autoincrement())
+  name                     String
+  nationality              String
+  formerPlayerExperience   Boolean
+  players                  PlayerCoach[]
 }
 
 model PlayerCoach {
@@ -50,12 +52,15 @@ model Tournament {
   isGrandSlam Boolean           @default(false)
   matches     Match[]
   flags       PerformanceFlag[]
+  champions   TournamentChampion[]
+  stats       PlayerTournamentStats[]
 }
 
 model Match {
   id           Int           @id @default(autoincrement())
   tournament   Tournament    @relation(fields: [tournamentId], references: [id])
   tournamentId Int
+  eventType    String        // "Singles" | "Doubles"
   round        String        // "QF" | "SF" | "F"
   matchDate    DateTime
   players      MatchPlayer[]
@@ -63,30 +68,56 @@ model Match {
 }
 
 model MatchPlayer {
-  id       Int     @id @default(autoincrement())
-  match    Match   @relation(fields: [matchId], references: [id])
+  id       Int       @id @default(autoincrement())
+  match    Match     @relation(fields: [matchId], references: [id])
   matchId  Int
-  player   Player  @relation(fields: [playerId], references: [id])
+  player   Player    @relation(fields: [playerId], references: [id])
   playerId Int
-  side     String  // "A" | "B"
-  isWinner Boolean @default(false)
+  side     String    // "A" | "B"
+  isWinner Boolean   @default(false)
 }
 
 model MatchScore {
-  id           Int   @id @default(autoincrement())
-  match        Match @relation(fields: [matchId], references: [id])
+  id           Int     @id @default(autoincrement())
+  match        Match   @relation(fields: [matchId], references: [id])
   matchId      Int
   setNumber    Int
   playerAGames Int
   playerBGames Int
 }
 
-model PerformanceFlag {
-  id           Int        @id @default(autoincrement())
-  player       Player     @relation(fields: [playerId], references: [id])
+model TournamentChampion {
+  id           Int          @id @default(autoincrement())
+  player       Player       @relation(fields: [playerId], references: [id])
   playerId     Int
-  tournament   Tournament @relation(fields: [tournamentId], references: [id])
   tournamentId Int
-  flagReason   String
-  flaggedAt    DateTime   @default(now())
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id])
+  eventType    String       // "Singles" | "Doubles"
 }
+
+model PlayerTournamentStats {
+  id           Int            @id @default(autoincrement())
+  player       Player         @relation(fields: [playerId], references: [id])
+  playerId     Int
+  tournamentId Int
+  tournament   Tournament      @relation(fields: [tournamentId], references: [id])
+  eventType    String          // "Singles" | "Doubles"
+  matchesPlayed Int        
+  matchesWon    Int    
+  matchesLost   Int
+  setsWon       Int        
+  setsLost      Int           
+}
+
+model PerformanceFlag {
+  id               Int        @id @default(autoincrement())
+  player           Player     @relation(fields: [playerId], references: [id])
+  playerId         Int
+  tournament       Tournament @relation(fields: [tournamentId], references: [id])
+  tournamentId     Int
+  flagReason       String
+  flaggedAt        DateTime   @default(now())
+  resolved         Boolean    @default(false)
+}
+
+   
