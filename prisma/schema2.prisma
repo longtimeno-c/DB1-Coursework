@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Gender {
+  M
+  F
+}
+
+enum EventType {
+  Singles
+  Doubles
+}
+
+enum SurfaceType {
+  Hard
+  Clay
+  Grass
+}
+
+enum Round {
+  R32
+  R16
+  QF
+  SF
+  F
+}
+
+enum MatchSide {
+  A
+  B
+}
+
+model Player {
+  id            Int        @id @default(autoincrement())
+  name          String
+  gender        Gender
+  nationality   String
+  dateOfBirth   DateTime
+  isActive      Boolean    @default(true)
+
+  coaches       PlayerCoach[]
+  matchEntries  MatchPlayer[]
+  flags         PerformanceFlag[]
+  championships TournamentChampion[]
+  stats         PlayerTournamentStats[]
+}
+
+model Coach {
+  id                       Int      @id @default(autoincrement())
+  name                     String
+  nationality              String
+  formerPlayerExperience   Boolean
+
+  players PlayerCoach[]
+}
+
+model PlayerCoach {
+  id        Int      @id @default(autoincrement())
+  playerId  Int
+  coachId   Int
+  startDate DateTime
+  endDate   DateTime?
+
+  player Player @relation(fields: [playerId], references: [id])
+  coach  Coach  @relation(fields: [coachId], references: [id])
+
+  @@unique([playerId, coachId, startDate])
+  @@index([playerId])
+  @@index([coachId])
+}
+
+model Tournament {
+  id          Int          @id @default(autoincrement())
+  name        String
+  location    String
+  surfaceType SurfaceType
+  startDate   DateTime
+  endDate     DateTime
+  isGrandSlam Boolean      @default(false)
+
+  matches   Match[]
+  flags     PerformanceFlag[]
+  champions TournamentChampion[]
+  stats     PlayerTournamentStats[]
+}
+
+model Match {
+  id           Int        @id @default(autoincrement())
+  tournamentId Int
+  eventType    EventType
+  round        Round
+  matchDate    DateTime
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  players    MatchPlayer[]
+  scores     MatchScore[]
+
+  @@index([tournamentId])
+}
+
+model MatchPlayer {
+  id       Int       @id @default(autoincrement())
+  matchId  Int
+  playerId Int
+  side     MatchSide
+  isWinner Boolean   @default(false)
+
+  match  Match  @relation(fields: [matchId], references: [id])
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([matchId, playerId])
+  @@index([matchId])
+  @@index([playerId])
+}
+
+model MatchScore {
+  id           Int  @id @default(autoincrement())
+  matchId      Int
+  setNumber    Int
+  playerAGames Int
+  playerBGames Int
+
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@unique([matchId, setNumber])
+  @@index([matchId])
+}
+
+model PerformanceFlag {
+  id           Int      @id @default(autoincrement())
+  playerId     Int
+  tournamentId Int
+  flagReason   String
+  flaggedAt    DateTime @default(now())
+  resolved     Boolean  @default(false)
+
+  player     Player     @relation(fields: [playerId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+
+  @@index([playerId])
+  @@index([tournamentId])
+}
+
+model TournamentChampion {
+  id           Int       @id @default(autoincrement())
+  playerId     Int
+  tournamentId Int
+  eventType    EventType
+
+  player     Player     @relation(fields: [playerId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+
+  @@unique([playerId, tournamentId, eventType])
+  @@index([tournamentId])
+}
+
+model PlayerTournamentStats {
+  id            Int       @id @default(autoincrement())
+  playerId      Int
+  tournamentId  Int
+  eventType     EventType
+  matchesPlayed Int
+  matchesWon    Int
+  matchesLost   Int
+
+  player     Player     @relation(fields: [playerId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+
+  @@unique([playerId, tournamentId, eventType])
+  @@index([playerId])
+  @@index([tournamentId])
+}
