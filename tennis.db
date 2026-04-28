@@ -1,0 +1,151 @@
+
+CREATE TABLE player (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    gender GENDER NOT NULL,
+    nationality VARCHAR(100) NOT NULL,
+    date_of_birth DATE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+
+CREATE TABLE coach (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    nationality VARCHAR(100) NOT NULL,
+    date_of_birth DATE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+
+CREATE TABLE playercoach (
+    id SERIAL PRIMARY KEY,
+    player_id INT NOT NULL,
+    coach_id INT NOT NULL,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP,
+
+    CONSTRAINT fk_player FOREIGN KEY (player_id) REFERENCES player(id),
+    CONSTRAINT fk_coach FOREIGN KEY (coach_id) REFERENCES coach(id),
+
+    CONSTRAINT unique_player_coach_startdate
+        UNIQUE (player_id, coach_id, start_date)
+);
+
+CREATE INDEX index_playercoach_player_id ON playercoach(player_id);
+CREATE INDEX index_playercoach_coach_id ON playercoach(coach_id);
+
+
+CREATE TABLE tournament (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    location VARCHAR(100),
+    surface_type SURFACE_TYPE,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL,
+    is_grand_slam BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+
+CREATE TABLE matches (
+    id SERIAL PRIMARY KEY,
+    tournament_id INT NOT NULL,
+    round ROUND NOT NULL,
+    match_date DATE NOT NULL,
+
+    CONSTRAINT fk_tournament
+        FOREIGN KEY (tournament_id)
+        REFERENCES tournament(id)
+);
+
+CREATE INDEX index_matches_tournament_id ON matches(tournament_id);
+
+
+CREATE TABLE matchplayer (
+    id SERIAL PRIMARY KEY,
+    match_id INT NOT NULL,
+    player_id INT NOT NULL,
+    side MATCH_SIDE NOT NULL,
+    is_winner BOOLEAN NOT NULL DEFAULT FALSE,
+
+    CONSTRAINT fk_match FOREIGN KEY (match_id) REFERENCES matches(id),
+    CONSTRAINT fk_player FOREIGN KEY (player_id) REFERENCES player(id),
+
+    CONSTRAINT unique_matchid_playerid
+        UNIQUE (match_id, player_id)
+);
+
+CREATE INDEX index_matchplayer_match_id ON matchplayer(match_id);
+CREATE INDEX index_matchplayer_player_id ON matchplayer(player_id);
+
+
+CREATE TABLE matchscore (
+    id SERIAL PRIMARY KEY,
+    match_id INT NOT NULL,
+    set_number INT NOT NULL,
+    player_a_games INT NOT NULL,
+    player_b_games INT NOT NULL,
+
+    CONSTRAINT fk_match FOREIGN KEY (match_id) REFERENCES matches(id),
+
+    CONSTRAINT unique_matchid_setnumber
+        UNIQUE (match_id, set_number)
+);
+
+CREATE INDEX index_matchscore_matchid ON matchscore(match_id);
+
+
+CREATE TABLE performanceflag (
+    id SERIAL PRIMARY KEY,
+    player_id INT NOT NULL,
+    tournament_id INT NOT NULL,
+    flag_reason VARCHAR(200) NOT NULL,
+    flagged_at TIMESTAMP NOT NULL,
+    resolved BOOLEAN NOT NULL DEFAULT FALSE,
+
+    CONSTRAINT fk_player FOREIGN KEY (player_id) REFERENCES player(id),
+    CONSTRAINT fk_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(id)
+);
+
+CREATE INDEX index_performanceflag_playerid ON performanceflag(player_id);
+CREATE INDEX index_performanceflag_tournamentid ON performanceflag(tournament_id);
+
+
+CREATE TABLE tournamentchampion (
+    id SERIAL PRIMARY KEY,
+    player_id INT NOT NULL,
+    tournament_id INT NOT NULL,
+    event_type EVENT_TYPE NOT NULL,
+
+    CONSTRAINT fk_player FOREIGN KEY (player_id) REFERENCES player(id),
+    CONSTRAINT fk_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(id),
+
+    CONSTRAINT unique_playerid_tournamentid_eventtype
+        UNIQUE (player_id, tournament_id, event_type)
+);
+
+CREATE INDEX index_tournamentchampion_tournamentid
+ON tournamentchampion(tournament_id);
+
+
+CREATE TABLE playerperformancestats (
+    id SERIAL PRIMARY KEY,
+    player_id INT NOT NULL,
+    tournament_id INT NOT NULL,
+    event_type EVENT_TYPE NOT NULL,
+    matches_played INT,
+    matches_won INT NOT NULL,
+    matches_lost INT NOT NULL,
+
+    CONSTRAINT fk_player FOREIGN KEY (player_id) REFERENCES player(id),
+    CONSTRAINT fk_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(id),
+
+    CONSTRAINT unique_playerid_tournamentid_eventtype
+        UNIQUE (player_id, tournament_id, event_type)
+);
+
+CREATE INDEX playerperformancestats_playerid
+ON playerperformancestats(player_id);
+
+CREATE INDEX playerperformancestats_tournamentid
+ON playerperformancestats(tournament_id);
