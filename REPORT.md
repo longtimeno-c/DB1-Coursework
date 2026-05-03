@@ -2,9 +2,15 @@
 
 ## Tennis Tournament Database System
 
-**Module:** CS1DB Databases
-**Submission Date:** 11 May 2026
-**Weighting:** 50% of final mark
+| Field | Value |
+|---|---|
+| **Module Code** | CS1DB Databases |
+| **Assignment Title** | Tennis Tournament Database System — Group Coursework Report |
+| **Date Completed** | 3 May 2026 |
+| **Submission Date** | 11 May 2026 |
+| **Weighting** | 50% of final module mark |
+| **Actual Hours Spent** | _TBC — group to confirm before submission_ |
+| **Group Members** | _TBC — see Effort Allocation Sheet (§8)_ |
 
 ---
 

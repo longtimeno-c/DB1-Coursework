@@ -1,204 +1,188 @@
-# CS1DB Tennis Tournament Database
+You need to build a group PostgreSQL database project for a tennis tournament results system, then submit one PDF report on Blackboard by 11 May 2026. It is worth 50% of CS1DB.
 
-A relational database system for managing professional tennis tournaments, built for the **CS1DB Databases** module coursework (50% of final mark). Due **11 May 2026**.
+What the coursework is
 
----
+You are designing and implementing a database that tracks:
 
-## Overview
+tennis players, male and female
+singles and doubles matches
+tournaments/events, especially Grand Slams and major tournaments
+match results, including set scores
+player–coach relationships over time
+coaches, who must also have had professional playing experience
+performance improvements that could suggest possible doping
 
-This project implements a fully normalised (3NF) PostgreSQL database that tracks:
+You can use dummy/synthetic data, but you need at least:
 
-- **15 players** (9 male, 6 female) — top ATP/WTA professionals
-- **9 coaches** — all with verified professional playing experience
-- **5 tournaments** — including 2 Grand Slams + Indian Wells & Miami (Sunshine Double)
-- **30 matches** — semi-finals and finals for both genders across all tournaments
-- **Set-by-set scoring** — granular `MatchScore` records for all finals
-- **Coaching history** — temporal player–coach relationships with start/end dates
-- **Performance anomaly detection** — doping flags based on statistical spikes
+15+ players
+5+ events/tournaments
+complete match data for at least the semi-finals and finals of each event
+enough attributes to support the required queries
+What you actually need to submit
 
-## Tech Stack
+Submit one group report as a PDF. Max length is 7 pages, but you can use an annex/appendix for figures/screenshots. You also need an effort allocation sheet showing each group member’s contribution percentage, note, and signature.
 
-| Component | Technology |
-|---|---|
-| Database | PostgreSQL 14+ |
-| ORM | Prisma (v6/v7) |
-| Runtime | Node.js 18+ |
-| Language | JavaScript (CommonJS) |
-| Config | dotenv for environment variables |
+The report should follow this structure:
 
-## Project Structure
+1. Front page
 
-```
-DB1-Coursework/
-├── prisma/
-│   └── schema.prisma          # Prisma schema (8 models)
-├── prisma.config.ts            # Prisma configuration
-├── sql/
-│   ├── ddl.sql                 # CREATE TABLE statements with constraints
-│   ├── dml.sql                 # INSERT statements (seed data)
-│   └── queries.sql             # All 8 queries in raw PostgreSQL SQL
-├── src/
-│   ├── db.js                   # Prisma client singleton
-│   ├── seed.js                 # Programmatic seeding via Prisma
-│   └── queries.js              # All 8 queries via Prisma $queryRaw
-├── REPORT.md                   # Full coursework report
-├── plan.md                     # Execution plan & checklist
-├── package.json                # Dependencies and scripts
-└── README.md                   # This file
-```
+Include:
 
-## Database Schema
+Module Code: CS1DB
+Assignment report title
+Date completed
+Actual hours spent
+AI tools used, if any
+2. Introduction — 10 marks
 
-Eight tables in Third Normal Form:
+Explain the background of the project: basically, that you are creating a database for tennis players, tournaments, results, coaches, and performance tracking.
 
-| Table | Description | Key Constraints |
-|---|---|---|
-| `Player` | Tennis players (M/F) | `CHECK (gender IN ('M','F'))`, PK `id` |
-| `Coach` | Coaches with playing experience | `CHECK (former_player_experience = TRUE)` |
-| `PlayerCoach` | Temporal player–coach relationships | FK → Player, Coach; `CHECK (end_date > start_date)` |
-| `Tournament` | Tournament events | `CHECK (surface_type IN ('Hard','Clay','Grass'))` |
-| `Match` | Individual matches within tournaments | FK → Tournament; `CHECK (round IN ('R128'...'F'))` |
-| `MatchPlayer` | Players in each match + outcome | FK → Match, Player; `UNIQUE(match_id, player_id)` |
-| `MatchScore` | Set-by-set scoring | FK → Match; `UNIQUE(match_id, set_number)` |
-| `PerformanceFlag` | Doping/anomaly flags | FK → Player, Tournament |
+Also explain which design techniques you will use, for example:
 
-### E-R Relationships
+E-R modelling
+normalisation to 3NF
+PostgreSQL implementation
+SQL DDL for table creation
+SQL DML for inserting and querying data
+3. E-R modelling — 30 marks
 
-```
-Player ←──M:N──→ Coach        (via PlayerCoach, temporal)
-Player ←──M:N──→ Match        (via MatchPlayer)
-Tournament ──1:N──→ Match
-Match ──1:N──→ MatchScore
-Player ──1:N──→ PerformanceFlag
-Tournament ──1:N──→ PerformanceFlag
-```
+This is a big section.
 
-## Queries Implemented
+You need to create an Entity Relationship model, probably in draw.io, showing your database structure. The supporting material says the evidence expected is an E-R diagram, defined entities, constraints, assumptions, and a written justification that the model is in 3NF.
 
-### Simple
-| # | Query | Technique |
-|---|---|---|
-| Q1 | Last 2 tournaments a player participated in | Multi-join + `ORDER BY ... LIMIT 2` |
-| Q2 | Grand Slam winners from previous year | `EXTRACT(YEAR)` + dynamic date filter |
-| Q3 | Player rankings by total match wins | `ROW_NUMBER()` window function + `GROUP BY` |
-| Q4 | Players with frequent coach changes (3 yrs) | `COUNT(DISTINCT)` + `HAVING` + `INTERVAL` |
+Your model should include entities such as:
 
-### Complex
-| # | Query | Technique |
-|---|---|---|
-| Q5 | Sunshine Double winners (IW + Miami same year) | `GROUP BY` + `HAVING COUNT(DISTINCT) = 2` |
-| Q6 | Won championships as both player and coach | CTEs + `INTERSECT` set operation |
-| Q7 | Coaches who won titles with multiple players | 6-way join + temporal `BETWEEN` filter + `STRING_AGG` |
-| Q8 | Doping suspects (performance spike detection) | `LAG()` window function + CTEs + threshold filter |
+Player
+Coach
+Tournament
+Event
+Match
+MatchSet
+PlayerCoach
+Team or DoublesTeam
+MatchParticipant
+PerformanceMetric
 
-## Setup & Usage
+For each table/entity, show:
 
-### Prerequisites
-- Node.js >= 18
-- PostgreSQL >= 14 running locally (or hosted)
-- npm
+attributes
+data types
+primary keys
+foreign keys
+relationships
+cardinality, e.g. one-to-many, many-to-many
+constraints
+assumptions
 
-### 1. Install dependencies
-```bash
-npm install
-```
+You also need to explain why it is in Third Normal Form. That means saying things like:
 
-### 2. Configure database connection
-Create a `.env` file in the project root:
-```env
-DATABASE_URL="postgresql://<user>:<password>@localhost:5432/tennis_db"
-```
+each table represents one clear thing
+every non-key attribute depends on the whole primary key
+there are no transitive dependencies
+repeated data has been split into separate tables
+many-to-many relationships use linking tables
+4. PostgreSQL implementation — 30 marks
 
-### 3. Run Prisma migration
-```bash
-npx prisma migrate dev --name init
-```
+You need to actually build the database in PostgreSQL.
 
-### 4. Seed the database
+This means writing SQL DDL like:
 
-**Option A — Via Prisma ORM (recommended):**
-```bash
-npm run seed
-```
+CREATE TABLE player (...);
+CREATE TABLE tournament (...);
+CREATE TABLE match (...);
 
-**Option B — Via raw SQL (direct PostgreSQL):**
-```bash
-psql -d tennis_db -f sql/ddl.sql
-psql -d tennis_db -f sql/dml.sql
-```
+You need to show:
 
-### 5. Run queries
+the SQL code used to create the tables
+screenshots proving the tables were created
+validation that the structure matches your E-R model
+evidence that constraints work properly
 
-**Option A — Via Prisma ORM:**
-```bash
-npm run queries
-```
+Then you need to populate the tables using SQL DML:
 
-**Option B — Via raw SQL:**
-```bash
-psql -d tennis_db -f sql/queries.sql
-```
+INSERT INTO player (...) VALUES (...);
+INSERT INTO tournament (...) VALUES (...);
+INSERT INTO match (...) VALUES (...);
 
-### 6. Browse data visually
-```bash
-npx prisma studio
-```
+You need screenshots showing data in the tables. The supporting material specifically says to evidence table population and include full SQL code for the queries.
 
-### Reset (destructive — wipes all data)
-```bash
-npx prisma migrate reset
-```
+5. Query data from the database — 15 marks
 
-## npm Scripts
+You need to choose:
 
-| Script | Command | Description |
-|---|---|---|
-| `npm run seed` | `node src/seed.js` | Seed the database with all test data |
-| `npm run queries` | `node src/queries.js` | Execute all 8 queries and print results |
-| `npm test` | — | Placeholder (no tests configured) |
+2 simple queries
+2 complex queries
 
-## Seed Data Summary
+From the assignment list.
 
-| Entity | Count | Notes |
-|---|---|---|
-| Coaches | 9 | Lendl, Apostolos, Moya, Nadal, Edberg, Cahill, Groeneveld, Annacone, Fissette |
-| Players | 15 | Alcaraz, Djokovic, Sinner, Medvedev, Zverev, Tsitsipas, Rublev, Rune, Fritz, Swiatek, Sabalenka, Gauff, Rybakina, Pegula, Garcia |
-| Player–Coach links | 14 | Includes historical + current relationships |
-| Tournaments | 5 | Australian Open, Indian Wells, Miami, Roland Garros, Wimbledon |
-| Matches | 30 | 2 SFs + 1 Final per gender × 5 tournaments |
-| Match Scores | 25 | Full set-by-set for all 10 finals |
-| Performance Flags | 2 | Alcaraz + Swiatek flagged at Miami Open |
+Simple query options include:
 
-## Normalisation
+last 2 tournaments a specified player participated in
+all Grand Slam winners from the previous year
+ranking table based on singles match victories
+players with most frequent coach changes in the past 3 years
 
-The schema satisfies **Third Normal Form (3NF)**:
-- **1NF:** All attributes atomic, no repeating groups, every table has a PK
-- **2NF:** No partial dependencies (single-column surrogate keys)
-- **3NF:** No transitive dependencies (verified for all 8 tables)
+Complex query options include:
 
-See [REPORT.md](REPORT.md) for the full normalisation analysis.
+winners of the Sunshine Double, or two events in the same year
+people who won championships both as players and coaches
+coaches who won championships with multiple players
+suspected doping players
 
-## Key Design Decisions
+For each query, include:
 
-1. **Surrogate keys** on all tables (SERIAL) — simplifies joins, decouples identity from business data
-2. **Temporal coaching** — `PlayerCoach.endDate` nullable (NULL = current) enables historical queries
-3. **MatchPlayer junction** — supports future doubles extension without schema changes
-4. **CHECK constraints** — enforce domain rules (gender, surface type, rounds, coach experience) at DB level
-5. **Cascading deletes** — `ON DELETE CASCADE` prevents orphan records
-6. **Performance indexes** — 7 indexes on FK columns used in multi-join queries
+test case name
+what the query is meant to prove
+SQL code
+screenshot of the result
+short explanation of whether it worked
 
-## Report
+The supporting material gives this exact style: test description, expected outcome, entity creation/data insertion, SQL query, and result screenshot.
 
-The full technical report is in [REPORT.md](REPORT.md), covering:
-1. Introduction with academic citations
-2. E-R model with full cardinality analysis
-3. 3NF normalisation proof for all 8 tables
-4. DDL with constraint explanations
-5. DML with data design rationale
-6. 4 simple + 4 complex queries with SQL, explanations, and expected results
-7. Reflection (strengths, weaknesses, improvements, legal/ethical/security)
-8. Conclusion and Harvard-formatted references
+6. Reflection — 10 marks
 
-## License
+You need to critically evaluate the database.
 
-ISC
+Talk about technical strengths and weaknesses, for example:
+
+3NF reduces duplication
+foreign keys maintain consistency
+constraints prevent invalid data
+synthetic data limits realism
+doping detection is simplified and would need better real-world data
+doubles matches make modelling more complex
+
+Then cover legal, social, ethical, and professional issues:
+
+doping suspicion should not be treated as proof
+player data should be handled carefully
+performance analytics could be unfair or misleading
+access control and information security are needed
+backups, permissions, and data validation matter
+7. Conclusion — 5 marks
+
+Summarise what your group built:
+
+an E-R model
+a normalised PostgreSQL database
+populated test data
+working SQL queries
+reflections on limitations and ethics
+Group admin stuff
+
+Your group should have four members. A spokesperson was supposed to register the group by 25 February 2026, but the actual coursework submission is due 11 May 2026. You must include the effort allocation sheet with contribution percentages.
+
+What I’d do first
+
+Start with the database design, not the report. Build the tables around these core ideas:
+
+Players can play matches.
+Coaches are also people with playing experience.
+Tournaments contain events.
+Matches belong to events.
+Matches have participants and winners.
+Sets store the actual scores.
+Coach relationships need start and end dates.
+Performance metrics can be calculated per player per tournament.
+
+Then write the SQL, insert dummy data, run the four queries, screenshot everything, and finally assemble the report.
