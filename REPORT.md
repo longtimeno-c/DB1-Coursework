@@ -47,7 +47,7 @@ Key design techniques employed include:
 - **Referential integrity enforcement** via foreign keys with `ON DELETE CASCADE` and `CHECK` constraints to uphold business rules at the database level.
 - **Window functions** (specifically `LAG`) for trend analysis in the doping-detection query, and **Common Table Expressions (CTEs)** for query readability and composability (Ramakrishnan & Gehrke, 2003).
 
-The database contains **15 players** (9 male, 6 female), **9 coaches**, **5 tournaments** (including 2 Grand Slams and the Indian Wells/Miami pairing for the Sunshine Double), **30 matches** (semi-final and final rounds for each tournament across both genders), full **set-by-set scoring** for all finals, and **2 performance anomaly flags**.
+The database contains **15 players** (9 male, 6 female), **9 coaches**, **5 tournaments** (including 2 Grand Slams and the Indian Wells/Miami pairing for the Sunshine Double), **32 matches** (semi-final and final rounds for each tournament across both genders, plus an extended R16 + QF run for the men's Roland Garros draw to give the doping-detection query enough variance to fire), full **set-by-set scoring** for all 10 finals, and **2 performance anomaly flags**.
 
 ---
 
@@ -307,9 +307,9 @@ The database is seeded with realistic data based on the 2025 professional tennis
 | **Players** | 15 | 9 male (Alcaraz, Djokovic, Sinner, Medvedev, Zverev, Tsitsipas, Rublev, Rune, Fritz) + 6 female (Swiatek, Sabalenka, Gauff, Rybakina, Pegula, Garcia) |
 | **PlayerCoach** | 14 | Includes historical and current relationships; some players have had multiple coaches |
 | **Tournaments** | 5 | Australian Open, Indian Wells Open, Miami Open, Roland Garros, Wimbledon (2 Grand Slams) |
-| **Matches** | 30 | 2 SFs + 1 Final per gender per tournament = 6 matches × 5 tournaments |
-| **MatchPlayers** | 60 | 2 players per match × 30 matches |
-| **MatchScores** | 25 | Full set-by-set scoring for all 10 finals |
+| **Matches** | 32 | 2 SFs + 1 Final per gender per tournament = 30, plus R16 + QF on the men's Roland Garros draw (2 extra) so Q8's `improvement >= 2` filter can fire |
+| **MatchPlayers** | 64 | 2 players per match × 32 matches |
+| **MatchScores** | 26 | Full set-by-set scoring for all 10 finals |
 | **PerformanceFlags** | 2 | Alcaraz and Swiatek flagged at Miami Open |
 
 **Sample DML (Coaches):**
@@ -367,7 +367,7 @@ The full DML is available in `sql/dml.sql` (approximately 220 lines of INSERT st
 
 **SQL:**
 ```sql
-SELECT
+SELECT DISTINCT
     p.name          AS player,
     t.name          AS tournament,
     t.start_date,
@@ -381,7 +381,7 @@ ORDER BY t.start_date DESC
 LIMIT 2;
 ```
 
-**Explanation:** This query joins through the `match_player` → `match` → `tournament` chain to find all tournaments a player appeared in, then orders by `start_date DESC` and limits to 2 rows. The `WHERE` clause filters by player name.
+**Explanation:** This query joins through the `match_player` → `match` → `tournament` chain to find all tournaments a player appeared in, then orders by `start_date DESC` and limits to 2 rows. `DISTINCT` is required because each match the player appeared in produces a separate join row — without it `LIMIT 2` would return two rows of the most recent tournament.
 
 **Expected Result (for Carlos Alcaraz):**
 
@@ -443,22 +443,22 @@ FROM match_player mp
 JOIN player p ON mp.player_id = p.id
 WHERE mp.is_winner = TRUE
 GROUP BY p.id, p.name, p.nationality
-ORDER BY total_wins DESC;
+ORDER BY total_wins DESC, p.name;
 ```
 
 **Explanation:** Groups match-player records by player where `is_winner = TRUE`, counts wins, and uses the `ROW_NUMBER()` window function to assign a ranking. `GROUP BY p.id` ensures correct grouping even if two players share a name.
 
-**Expected Result (top 5):**
+**Expected Result (top 5 from the seed in `sql/dml.sql`):**
 
 | rank | player | nationality | total_wins |
 |---|---|---|---|
-| 1 | Carlos Alcaraz | ESP | 9 |
-| 2 | Iga Swiatek | POL | 8 |
-| 3 | Jannik Sinner | ITA | 4 |
-| 4 | Aryna Sabalenka | BLR | 4 |
-| 5 | Elena Rybakina | KAZ | 3 |
+| 1 | Carlos Alcaraz | ESP | 11 |
+| 2 | Iga Swiatek | POL | 7 |
+| 3 | Aryna Sabalenka | BLR | 5 |
+| 4 | Coco Gauff | USA | 3 |
+| 5 | Jannik Sinner | ITA | 3 |
 
-Alcaraz dominates with wins at Indian Wells (SF+F), Miami (SF+F), Roland Garros (SF+F), Wimbledon (SF+F), and Australian Open SF = 9 wins. Swiatek follows with 8 wins across Indian Wells (SF+F), Miami (SF+F), Roland Garros (SF+F), Australian Open SF, and Wimbledon SF.
+Alcaraz dominates with 11 wins: AO SF, Indian Wells (SF+F), Miami (SF+F), Roland Garros (R16+QF+SF+F), and Wimbledon (SF+F). Swiatek records 7 wins across Indian Wells (SF+F), Miami (SF+F), Roland Garros (SF+F), and Wimbledon SF. Sinner and Gauff tie on 3; `ROW_NUMBER()` breaks the tie alphabetically by `p.name` per the `ORDER BY` tiebreaker, so Gauff edges Sinner.
 
 ---
 
@@ -476,7 +476,7 @@ JOIN player p ON pc.player_id = p.id
 WHERE pc.start_date >= CURRENT_DATE - INTERVAL '3 years'
 GROUP BY p.id, p.name
 HAVING COUNT(DISTINCT pc.coach_id) > 1
-ORDER BY coach_changes DESC;
+ORDER BY coach_changes DESC, p.name;
 ```
 
 **Explanation:** Filters coaching relationships that started within the last 3 years, groups by player, and counts distinct coaches. The `HAVING` clause limits results to players with more than 1 coach in that period.
@@ -485,10 +485,10 @@ ORDER BY coach_changes DESC;
 
 | player | coach_changes |
 |---|---|
-| Coco Gauff | 2 |
 | Carlos Alcaraz | 2 |
+| Coco Gauff | 2 |
 
-Gauff transitioned from Cahill to Annacone; Alcaraz from Lendl to Moya (depending on the 3-year window from execution date).
+Per the seed, Gauff transitioned from Sven Groeneveld (Jun 2023 – Sep 2024) to Paul Annacone (Oct 2024 – present); Alcaraz transitioned from Ivan Lendl (Jun 2023 – Jun 2024) to Carlos Moya (Jul 2024 – present). Both pairs of relationships fall inside the 3-year window from `CURRENT_DATE`.
 
 ---
 
@@ -664,13 +664,13 @@ ORDER BY improvement DESC;
 
 The `LAG()` window function is partitioned by `player_id` so each player's performance history is tracked independently. The threshold of 2 is configurable.
 
-**Expected Result:**
+**Expected Result (against the seed in `sql/dml.sql`):**
 
 | player | tournament | tournament_date | wins_previous_tournament | wins_this_tournament | improvement |
 |---|---|---|---|---|---|
-| Carlos Alcaraz | Roland Garros | 2025-05-25 | 1 | 3 | 2 |
+| Carlos Alcaraz | Roland Garros | 2025-05-25 | 2 | 4 | 2 |
 
-Alcaraz's wins increased from 1 (at a previous tournament) to 3 at Roland Garros (SF win + F win counted as 2, plus potentially another round). The flag correlates with the manually-inserted `PerformanceFlag` records.
+Alcaraz's wins jumped from 2 at the previous tournament (Miami: SF + F) to 4 at Roland Garros (R16 + QF + SF + F), an improvement of +2 — the threshold the query flags. This correlates with the manually-inserted `PerformanceFlag` row at Miami: the player's anomalous run continued into Roland Garros.
 
 > **Note:** The `PerformanceFlag` table stores *pre-computed flags* (inserted via DML), while Q8 dynamically computes suspicions from match data. Both approaches are complementary: the table records officially flagged incidents; the query identifies new potential cases.
 
